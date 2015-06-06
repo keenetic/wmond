@@ -840,7 +840,7 @@ main(int	argc,
   action.sa_mask = mask;
   action.sa_flags = SA_RESTART;
 
-  if(sigaction(SIGHUP, &action, NULL) != 0)
+  if(sigaction(SIGURG, &action, NULL) != 0)
     {
       perror("Can't initialize a signal handler");
       return(1);

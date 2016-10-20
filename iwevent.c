@@ -40,6 +40,8 @@
 
 #define STRING_MAX_SIZE	128
 
+#define OID_BNDSTRG_MSG				0x0950
+
 typedef struct iface_alias
 {
 	struct iface_alias *next;
@@ -468,6 +470,10 @@ print_event_token(
   char		buffer[256];	/* Temporary buffer */
   char		buffer2[30];	/* Temporary buffer */
   static const int PRIO = LOG_DAEMON | LOG_INFO;
+
+  if (event->cmd == IWEVCUSTOM &&
+      event->u.data.flags == OID_BNDSTRG_MSG)
+        return 0;
 
   /* Now, let's decode the event */
   switch(event->cmd)

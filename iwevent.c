@@ -29,6 +29,10 @@
 #include <signal.h>
 #include <syslog.h>
 #include <sys/time.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <regex.h>
 
 /* Ugly backward compatibility :-( */
 #ifndef IFLA_WIRELESS
@@ -41,6 +45,13 @@
 #define STRING_MAX_SIZE	128
 
 #define OID_BNDSTRG_MSG				0x0950
+
+#define	IW_DISASSOC_EVENT_FLAG                      0x0201
+#define	IW_DEAUTH_EVENT_FLAG                        0x0202
+#define	IW_AGEOUT_EVENT_FLAG                        0x0203
+
+#define MAC_REGEXP "STA\\(([0-9a-f]{2})\\:([0-9a-f]{2})\\:([0-9a-f]{2})\\:([0-9a-f]{2})\\:([0-9a-f]{2})\\:([0-9a-f]{2})\\)"
+#define CLEANUP_FB "/tmp/run/cleanupneigh.fb"
 
 typedef struct iface_alias
 {
@@ -504,6 +515,75 @@ print_event_token(
            if(strlen(custom) < sizeof(RAW_MSG) - 1 ||
               strncmp(custom, RAW_MSG, sizeof(RAW_MSG) - 1) != 0) {
              syslog(PRIO, "%s: %s.", name, custom);
+
+             if (event->u.data.flags == IW_DEAUTH_EVENT_FLAG ||
+                 event->u.data.flags == IW_AGEOUT_EVENT_FLAG ||
+                 event->u.data.flags == IW_DISASSOC_EVENT_FLAG)
+             {
+                  char * regexString = MAC_REGEXP;
+                  size_t maxGroups = 7;
+
+                  regex_t regexCompiled;
+                  regmatch_t groupArray[8];
+
+                  if (regcomp(&regexCompiled, regexString, REG_EXTENDED))
+                  {
+                      syslog(PRIO, "Could not compile regular expression");
+                  } else
+                  if (regexec(&regexCompiled, custom, maxGroups, groupArray, 0) == 0)
+                  {
+                       char sta_mac[20];
+                       char *p = sta_mac;
+                       unsigned int g = 0;
+                       unsigned int ctr = 0;
+
+                       memset(sta_mac, 0, 20 * sizeof(char));
+
+                       for (g = 1; g < maxGroups; g++)
+                       {
+                            if (groupArray[g].rm_so == (size_t)-1)
+                                break;  // No more groups
+
+                            if (groupArray[g].rm_eo - groupArray[g].rm_so != 2)
+                                break;
+
+                            char temp[3];
+
+                            memset(temp, 0, 3 * sizeof(char));
+                            strncpy(temp,
+                                custom + groupArray[g].rm_so,
+                                groupArray[g].rm_eo - groupArray[g].rm_so);
+                            p += snprintf(p, 20, "%s:", temp);
+                            ctr++;
+                       }
+
+                       if (ctr == 6)
+                       {
+                           *(p - 1) = '\0';
+
+                           pid_t pid = fork();
+
+                           if (pid == -1)
+                           {
+                               syslog(PRIO, "unable to fork");
+                           } 
+                           else if (pid > 0)
+                           {
+                              int status;
+                              waitpid(pid, &status, 0);
+                           }
+                           else 
+                           {
+                               char *argv[] = { CLEANUP_FB, sta_mac, 0 };
+                               char *envp[] = { 0 };
+
+                               execve(argv[0], &argv[0], envp);
+                               _exit(EXIT_FAILURE);
+                           }
+                       }
+                  }
+                  regfree(&regexCompiled);
+             }
            }
         }
       }

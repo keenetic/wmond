@@ -46,6 +46,7 @@
 
 #define OID_BNDSTRG_MSG				0x0950
 
+#define	IW_ASSOC_EVENT_FLAG                         0x0200
 #define	IW_DISASSOC_EVENT_FLAG                      0x0201
 #define	IW_DEAUTH_EVENT_FLAG                        0x0202
 #define	IW_AGEOUT_EVENT_FLAG                        0x0203
@@ -518,7 +519,8 @@ print_event_token(
 
              if (event->u.data.flags == IW_DEAUTH_EVENT_FLAG ||
                  event->u.data.flags == IW_AGEOUT_EVENT_FLAG ||
-                 event->u.data.flags == IW_DISASSOC_EVENT_FLAG)
+                 event->u.data.flags == IW_DISASSOC_EVENT_FLAG ||
+                 event->u.data.flags == IW_ASSOC_EVENT_FLAG)
              {
                   char * regexString = MAC_REGEXP;
                   size_t maxGroups = 7;
@@ -574,7 +576,13 @@ print_event_token(
                            }
                            else 
                            {
-                               char *argv[] = { CLEANUP_FB, sta_mac, 0 };
+                               char *argv[] = {
+                                   CLEANUP_FB,
+                                   (event->u.data.flags == IW_ASSOC_EVENT_FLAG) ?
+                                       "add" :
+                                       "remove",
+                                   name,
+                                   sta_mac, 0 };
                                char *envp[] = { 0 };
 
                                execve(argv[0], &argv[0], envp);

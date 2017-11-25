@@ -27,6 +27,7 @@
 #include <errno.h>
 #include <getopt.h>
 #include <signal.h>
+#include <string.h>
 #include <syslog.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -524,10 +525,15 @@ print_event_token(
              {
                   char * regexString = MAC_REGEXP;
                   size_t maxGroups = 7;
+				  char * name_dup = strdup(name);
 
                   regex_t regexCompiled;
                   regmatch_t groupArray[8];
 
+                  if (name_dup == NULL)
+                  {
+                      syslog(PRIO, "Out of memory");
+                  } else
                   if (regcomp(&regexCompiled, regexString, REG_EXTENDED))
                   {
                       syslog(PRIO, "Could not compile regular expression");
@@ -581,7 +587,7 @@ print_event_token(
                                    (event->u.data.flags == IW_ASSOC_EVENT_FLAG) ?
                                        "add" :
                                        "remove",
-                                   name,
+                                   name_dup,
                                    sta_mac, 0 };
                                char *envp[] = { 0 };
 
@@ -590,6 +596,8 @@ print_event_token(
                            }
                        }
                   }
+
+				  free(name_dup);
                   regfree(&regexCompiled);
              }
            }

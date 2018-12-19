@@ -45,6 +45,7 @@
 
 #define STRING_MAX_SIZE	128
 
+#define OID_802_11_WNM_EVENT			0x094B
 #define OID_BNDSTRG_MSG				0x0950
 
 #define	IW_ASSOC_EVENT_FLAG                         0x0200
@@ -485,7 +486,8 @@ print_event_token(
   static const int PRIO = LOG_DAEMON | LOG_INFO;
 
   if (event->cmd == IWEVCUSTOM &&
-      event->u.data.flags == OID_BNDSTRG_MSG)
+      (event->u.data.flags == OID_BNDSTRG_MSG ||
+       event->u.data.flags == OID_802_11_WNM_EVENT))
         return 0;
 
   /* Now, let's decode the event */

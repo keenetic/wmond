@@ -45,8 +45,8 @@
 
 #define STRING_MAX_SIZE	128
 
-#define OID_802_11_WNM_EVENT			0x094B
-#define OID_BNDSTRG_MSG				0x0950
+#define IW_SYSLOG_EVENT_MIN			0x0200
+#define IW_SYSLOG_EVENT_MAX			0x0600
 
 #define	IW_ASSOC_EVENT_FLAG                         0x0200
 #define	IW_DISASSOC_EVENT_FLAG                      0x0201
@@ -486,8 +486,8 @@ print_event_token(
   static const int PRIO = LOG_DAEMON | LOG_INFO;
 
   if (event->cmd == IWEVCUSTOM &&
-      (event->u.data.flags == OID_BNDSTRG_MSG ||
-       event->u.data.flags == OID_802_11_WNM_EVENT))
+      (event->u.data.flags <  IW_SYSLOG_EVENT_MIN ||
+       event->u.data.flags >= IW_SYSLOG_EVENT_MAX))
         return 0;
 
   /* Now, let's decode the event */
@@ -510,11 +510,13 @@ print_event_token(
       {
         static const char RAW_MSG[] = "RAWSCMSG";	// RaLink raw message ID.
         char custom[IW_CUSTOM_MAX+1];
+
         memset(custom, '\0', sizeof(custom));
         if((event->u.data.pointer) && (event->u.data.length))
           memcpy(custom, event->u.data.pointer,
             sizeof(custom) - 1 < event->u.data.length ?
             sizeof(custom) - 1 : event->u.data.length);
+
         if(strlen(custom) > 0) {
            if(strlen(custom) < sizeof(RAW_MSG) - 1 ||
               strncmp(custom, RAW_MSG, sizeof(RAW_MSG) - 1) != 0) {

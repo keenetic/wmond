@@ -52,6 +52,8 @@
 #define	IW_DISASSOC_EVENT_FLAG                      0x0201
 #define	IW_DEAUTH_EVENT_FLAG                        0x0202
 #define	IW_AGEOUT_EVENT_FLAG                        0x0203
+#define IW_REASSOC_EVENT_FLAG                       0x021B
+#define IW_FT_AUTH_DONE_EVENT_FLAG                  0x021E
 
 #define MAC_REGEXP "STA\\(([0-9a-f]{2})\\:([0-9a-f]{2})\\:([0-9a-f]{2})\\:([0-9a-f]{2})\\:([0-9a-f]{2})\\:([0-9a-f]{2})\\)"
 #define CLEANUP_FB "/tmp/run/cleanupneigh.fb"
@@ -525,7 +527,9 @@ print_event_token(
              if (event->u.data.flags == IW_DEAUTH_EVENT_FLAG ||
                  event->u.data.flags == IW_AGEOUT_EVENT_FLAG ||
                  event->u.data.flags == IW_DISASSOC_EVENT_FLAG ||
-                 event->u.data.flags == IW_ASSOC_EVENT_FLAG)
+                 event->u.data.flags == IW_ASSOC_EVENT_FLAG ||
+                 event->u.data.flags == IW_REASSOC_EVENT_FLAG ||
+                 event->u.data.flags == IW_FT_AUTH_DONE_EVENT_FLAG)
              {
                   char * regexString = MAC_REGEXP;
                   size_t maxGroups = 7;
@@ -586,11 +590,20 @@ print_event_token(
                            }
                            else 
                            {
+                               const int is_assoc =
+                                   (event->u.data.flags == IW_ASSOC_EVENT_FLAG) ||
+                                   (event->u.data.flags == IW_REASSOC_EVENT_FLAG) ||
+                                   (event->u.data.flags == IW_FT_AUTH_DONE_EVENT_FLAG);
                                char *argv[] = {
                                    CLEANUP_FB,
-                                   (event->u.data.flags == IW_ASSOC_EVENT_FLAG) ?
-                                       "add" :
-                                       "remove",
+                                   is_assoc ? "add" : "remove",
+                                   (event->u.data.flags == IW_ASSOC_EVENT_FLAG ?
+                                       "assoc" :
+                                       (event->u.data.flags == IW_REASSOC_EVENT_FLAG ?
+                                           "reassoc" :
+                                           (event->u.data.flags == IW_FT_AUTH_DONE_EVENT_FLAG ?
+                                               "ft" :
+                                               "undefined"))),
                                    name_dup,
                                    sta_mac, 0 };
                                char *envp[] = { 0 };
